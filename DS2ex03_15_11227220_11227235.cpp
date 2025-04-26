@@ -170,9 +170,9 @@ class ProgramPackage {
     }
     //真正讀檔部分
     DataType data;
-    // while (file.read(reinterpret_cast<char*>(&data), sizeof(data));) {
-
-    // }
+    while (file.read(reinterpret_cast<char*>(&data), sizeof(data))) {
+      dataset.push_back(data);
+    }
     file.close();
     return true;
   }
