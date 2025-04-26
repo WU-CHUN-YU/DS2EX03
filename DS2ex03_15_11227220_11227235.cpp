@@ -5,7 +5,7 @@
 #include <fstream>
 #include <array>
 #include <cmath>
-
+#include <string>
 struct DataType {
   std::array<char, 10> sid;
   std::array<char, 10> sname;
@@ -13,8 +13,8 @@ struct DataType {
   float average_score;
 
   DataType() {
-    sid.fill('0');
-    sname.fill('0');
+    sid.fill('\0');
+    sname.fill('\0');
   }
 };
 
@@ -35,14 +35,14 @@ class LinearHash {
   bool IsPrime(int num) {
     if (num <= 1) {
       return false; // 0 和 1 不是質數
-    } else if (number == 2) {
+    } else if (num == 2) {
       return true;  // 2 是質數
-    } else if (number % 2 == 0) {
+    } else if (numb % 2 == 0) {
       return false; // 排除偶數
     } 
 
-    for (int i = 3; i <= std::sqrt(number); i += 2) {
-        if (number % i == 0) {
+    for (int i = 3; i <= std::sqrt(num); i += 2) {
+        if (num % i == 0) {
             return false;
         }
     }
@@ -117,13 +117,13 @@ class ProgramPackage {
   std::vector<DataType> dataset;
   LinearHash linear_hash;
  public:
-  std::string SplitString(std::string &line) {  //  切割檔案字串，取得欄目數據
-    std::string splited;
-    int end = line.find("\t");
-    splited = line.substr(0, end);
-    line = line.substr(end + 1, line.size());
-    return splited;
-  }
+ std::string SplitString(std::string &line) {  //  切割檔案字串，取得欄目數據
+  std::string splited;
+  int end = line.find("\t");
+  splited = line.substr(0, end);
+  line = line.substr(end + 1, line.size());
+  return splited;
+}
   DataType ProcessData(std::string line) {
     int column = 0;
     DataType data;
@@ -143,7 +143,7 @@ class ProgramPackage {
         if (s == "") {
           s = "0";
         }
-        data.score[column - 3] = std::stoi(s);
+        data.score[column - 2] = std::stoi(s);
       }
       column++;
     }
@@ -160,18 +160,15 @@ class ProgramPackage {
     }
     bin_file = "input" + file_name + ".bin";
     file.open(bin_file, std::ios::in | std::ios::binary);
-    if (!file.is_open()) {  // 確認檔案是否存在
-      std::cout << std::endl
-                << "### " << bin_file << " does not exist!" << " ###"
-                << std::endl
-                << std::endl;
+    if (!file.is_open()) { //確認檔案是否存在
+      std::cout << std::endl << "### " << bin_file << " does not exist!" << " ###" << std::endl << std::endl;
       if (!ReadTXTFile(file_name)) {
         return false;
       } else {
         file.open(bin_file, std::ios::in | std::ios::binary);
       }
     }
-    // 真正讀檔部分
+    //真正讀檔部分
     DataType data;
     // while (file.read(reinterpret_cast<char*>(&data), sizeof(data));) {
 
@@ -179,21 +176,18 @@ class ProgramPackage {
     file.close();
     return true;
   }
-  bool ReadTXTFile(std::string file_name) {  // 讀取TXT檔案
+  bool ReadTXTFile(std::string file_name) {  //讀取TXT檔案
     std::ifstream file;
     std::string txt_file, file_line;
     std::vector<DataType> temp_dataset;
     DataType data;
     txt_file = "input" + file_name + ".txt";
     file.open(txt_file);
-    if (!file.is_open()) {  // 確認檔案是否存在
-      std::cout << "### " << txt_file << " does not exist!" << " ###"
-                << std::endl
-                << std::endl
-                << std::endl;
+    if (!file.is_open()) { //確認檔案是否存在
+      std::cout << "### " << txt_file << " does not exist!" << " ###" << std::endl << std::endl << std::endl;
       return false;
     }
-    // 開始建立bin檔
+    //開始建立bin檔
     while (getline(file, file_line)) {
       data = ProcessData(file_line);
       temp_dataset.push_back(data);
@@ -207,16 +201,16 @@ class ProgramPackage {
     std::string bin_file = "input" + file_name + ".bin";
     file.open(bin_file, std::ios::out | std::ios::binary);
     for (DataType data : temp) {
-      file.write(reinterpret_cast<char *>(&data), sizeof(data));
+      file.write(reinterpret_cast<char*>(&data), sizeof(data));
     }
     file.close();
-    std::cout << "---" + bin_file + "has been created ---" << std::endl
-              << std::endl;
+    std::cout << "---" + bin_file + "has been created ---" << std::endl << std::endl;
     return;
   }
   std::array<char, 10> TransToChar(std::string str) {
     std::array<char, 10> arr;
-    for (int i = 0; i < str.length(); i += 1) {
+    str.resize(10, '\0');
+    for(int i = 0; i < str.length(); i++) {
       arr[i] = str[i];
     }
     return arr;
@@ -230,7 +224,7 @@ class ProgramPackage {
 
   void BuildHashByLinear () {
     array[linear_hash.CalcHashSize(dataset);]
-    
+
   }
 
   void BuildHashByDouble () {
