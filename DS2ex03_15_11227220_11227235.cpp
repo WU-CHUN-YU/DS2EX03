@@ -11,28 +11,34 @@ struct DataType {
   std::array<char, 10> sname;
   unsigned char score[6];
   float average_score;
-
-
 };
 
 struct HashContent {
-  int hash_value = 0;
+  int hash_value;
   std::array<char, 10> sid;
   std::array<char, 10> sname;
-  float avg_score = 0;  
-  DataType() { // 初始化內容，確保hash table創建時是空的
+  float avg_score;  
+  HashContent() { // 初始化內容，確保hash table創建時是空的
+    hash_value = 0;
     sid.fill('\0');
     sname.fill('\0');
+    avg_score = 0;
   }
 };
 
 class LinearHash {
  private:
-  int hash_table_size = 0;
-  int load = 0;
-  int avg_success = 0;
-  int avg_unsuccess = 0;
+  int hash_table_size;
+  int load;
+  int avg_success;
+  int avg_unsuccess;
  public:
+  LinearHash(){
+    int hash_table_size = 0;
+    int load = 0;
+    int avg_success = 0;
+    int avg_unsuccess = 0;
+  }
 
   bool IsPrime(int num) {
     // 排除掉較好判斷的情況
@@ -40,7 +46,7 @@ class LinearHash {
       return false; 
     } else if (num == 2) {
       return true;  
-    } else if (numb % 2 == 0) {
+    } else if (num % 2 == 0) {
       return false; 
     } 
 
@@ -61,7 +67,7 @@ class LinearHash {
     }
     
     while(true) {
-      if (is_prime(cur)) {
+      if (IsPrime(cur)) {
         break;
       } // else
       cur += 2;
@@ -83,7 +89,7 @@ class LinearHash {
     int i = 0;
     for(int i = 0; i < sid.size(); i += 1) {
       // hash key
-      hash_value *= sid[i]
+      hash_value *= sid[i];
       hash_value %= hash_table_size; 
     }
     return hash_value;
@@ -96,10 +102,14 @@ class LinearHash {
     return false;
   }
 
-  void StoreHash(struct HashContent target, struct HashContent hash_table[]) {
-    target.hash_value = CalcHashSize(target.sid)
+  void StoreHash(struct DataType cur, struct HashContent hash_table[]) {
+    struct HashContent temp;
+    temp.hash_value = CalcHashValue(cur.sid);
+    temp.sid = cur.sid;
+    temp.sname = cur.sname;
+    temp.avg_score = cur.average_score;
 
-    int insert_pos = hash_value;
+    int insert_pos = temp.hash_value;
     // 如果發生碰撞，找下一個位置直到找到空位為止
     while(StructIsMpt(hash_table[insert_pos])) {
       insert_pos += 1;
@@ -110,7 +120,7 @@ class LinearHash {
     }
 
     // insert temp到hash_table裡
-    hash_table[insert_pos] = target;
+    hash_table[insert_pos] = temp;
   }
 
   void WriteFile(std::string file_name) {
@@ -236,7 +246,7 @@ class ProgramPackage {
   void BuildHashByLinear () {
     struct HashContent hash_table[linear_hash.CalcHashSize(dataset.size())];
     for(int i = 0; i < dataset.size(); i += 1) {
-      linear_hash.StoreHash(dataset[i]);
+      linear_hash.StoreHash(dataset[i], hash_table);
     }
     linear_hash.Output();
   }
