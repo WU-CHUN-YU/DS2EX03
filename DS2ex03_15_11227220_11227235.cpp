@@ -12,35 +12,39 @@ struct DataType {
   unsigned char score[6];
   float average_score;
 
-  DataType() {
+
+};
+
+struct HashContent {
+  int hash_value = 0;
+  std::array<char, 10> sid;
+  std::array<char, 10> sname;
+  float avg_score = 0;  
+  DataType() { // 初始化內容，確保hash table創建時是空的
     sid.fill('\0');
     sname.fill('\0');
   }
 };
 
-struct HashContent {
-  int hash_value;
-  std::array<char, 10> sid;
-  std::array<char, 10> sname;
-  float avg_score;
-};
-
 class LinearHash {
  private:
   int hash_table_size = 0;
-  int success_avg = 0;
-  int unsuccess_avg = 0;
+  int load = 0;
+  int avg_success = 0;
+  int avg_unsuccess = 0;
  public:
 
   bool IsPrime(int num) {
-    if (num <= 1) {
-      return false; // 0 和 1 不是質數
+    // 排除掉較好判斷的情況
+    if (num <= 1) { 
+      return false; 
     } else if (num == 2) {
-      return true;  // 2 是質數
+      return true;  
     } else if (numb % 2 == 0) {
-      return false; // 排除偶數
+      return false; 
     } 
 
+    // 檢查num能不能被整除
     for (int i = 3; i <= std::sqrt(num); i += 2) {
         if (num % i == 0) {
             return false;
@@ -50,26 +54,34 @@ class LinearHash {
     return true;
   }
 
-  void CalcHashSize(std::vector<DataType> dataset) {
-    int cur = dataset.size() * 1.1 + 1; //start value
+  int CalcHashSize(int dataset_size) {
+    int cur = dataset_size * 1.1 + 1; //start value
     if(cur % 2 == 0) { // 確保當前值是奇數
-      cur += 1;
+      cur += 1;        // 確保當前值是奇數
     }
     
     while(true) {
       if (is_prime(cur)) {
         break;
-      }
+      } // else
       cur += 2;
     }
 
     return cur;
+    // 運算avg search要用的值
+    hash_table_size = cur;
+    load = hash_table_size / dataset_size;
+
+    avg_success   = (1 + 1/(1-load))/2;
+    avg_unsuccess = (1 + 1/((1-load)*(1-load)))/2;
   }
 
   // processing
-  int CalcHashValue(char sid[10]) {
-    int hash_value = 1;
-    for(int i = 0; i < sizeof(sid); i += 1) {
+  int CalcHashValue(std::array<char, 10> sid) {
+    int hash_value = 1; // 隱測數字可能會很大，優化時把int改成long int
+
+    int i = 0;
+    for(int i = 0; i < sid.size(); i += 1) {
       // hash key
       hash_value *= sid[i]
       hash_value %= hash_table_size; 
@@ -77,24 +89,28 @@ class LinearHash {
     return hash_value;
   }
 
-  void StoreHash(int hash_value, char sid[10],
-                 char sname[10], float avg_score) {
-    struct HashContent temp;
-    temp.hash_value = hash_value;
-    temp.sid = sid;
-    temp.sname = sname;
-    temp.avg_score = avg_score;
+  bool StructIsMpt(HashContent stru){
+    if (stru.sid['\0'] == 0) {
+      return true;
+    } // else
+    return false;
+  }
 
-    //如果發生碰撞
+  void StoreHash(struct HashContent target, struct HashContent hash_table[]) {
+    target.hash_value = CalcHashSize(target.sid)
+
+    int insert_pos = hash_value;
+    // 如果發生碰撞，找下一個位置直到找到空位為止
+    while(StructIsMpt(hash_table[insert_pos])) {
+      insert_pos += 1;
+      // 如果索引值超出陣列大小，回到陣列開頭
+      if (insert_pos > (sizeof(hash_table) - 1)) {
+        insert_pos = 0;
+      }
+    }
 
     // insert temp到hash_table裡
-  }
-
-  void CalcSuccessAvg() {
-    success_avg = 0;
-  }
-  void CalcUnSuccessAvg() {
-    unsuccess_avg = 0;  
+    hash_table[insert_pos] = target;
   }
 
   void WriteFile(std::string file_name) {
@@ -103,8 +119,8 @@ class LinearHash {
   // output
   void Output() {
     std::cout << "Hash table has been successfully created by Linear probing" << std::endl
-              << "unsuccessful search: " << success_avg << "comparisons on average" << std::endl
-              << "successful search: " << unsuccess_avg  << "comparisons on average" << std::endl;
+              << "unsuccessful search: " << avg_success << "comparisons on average" << std::endl
+              << "successful search: " << avg_unsuccess  << "comparisons on average" << std::endl;
   } 
 };
 
@@ -207,6 +223,7 @@ class ProgramPackage {
     std::cout << "---" + bin_file + "has been created ---" << std::endl << std::endl;
     return;
   }
+  
   std::array<char, 10> TransToChar(std::string str) {
     std::array<char, 10> arr;
     str.resize(10, '\0');
@@ -216,15 +233,12 @@ class ProgramPackage {
     return arr;
   }
 
-  // 字串轉整數 stoi
-  // 字串轉浮點數 stof
-
-  // 讀二進位檔:
-  // 開檔模式要用 std::ios::binary 表示二進制模式
-
   void BuildHashByLinear () {
-    array[linear_hash.CalcHashSize(dataset);]
-
+    struct HashContent hash_table[linear_hash.CalcHashSize(dataset.size())];
+    for(int i = 0; i < dataset.size(); i += 1) {
+      linear_hash.StoreHash(dataset[i]);
+    }
+    linear_hash.Output();
   }
 
   void BuildHashByDouble () {
