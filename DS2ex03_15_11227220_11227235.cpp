@@ -29,15 +29,15 @@ struct HashContent {
 class LinearHash {
  private:
   int hash_table_size;
-  int load;
-  int avg_success;
-  int avg_unsuccess;
+  float load;
+  float avg_success;
+  float avg_unsuccess;
  public:
   LinearHash(){
-    int hash_table_size = 0;
-    int load = 0;
-    int avg_success = 0;
-    int avg_unsuccess = 0;
+    hash_table_size = 0;
+    load = 0;
+    avg_success = 0;
+    avg_unsuccess = 0;
   }
 
   bool IsPrime(int num) {
@@ -73,13 +73,14 @@ class LinearHash {
       cur += 2;
     }
 
-    return cur;
     // 運算avg search要用的值
     hash_table_size = cur;
-    load = hash_table_size / dataset_size;
+    // load = hash_table_size / dataset_size;
 
-    avg_success   = (1 + 1/(1-load))/2;
-    avg_unsuccess = (1 + 1/((1-load)*(1-load)))/2;
+    //   avg_success   = (1 + 1/(1-load))/2;
+    //   avg_unsuccess = (1 + 1/((1-load)*(1-load)))/2;
+
+    return cur;
   }
 
   // processing
@@ -87,16 +88,20 @@ class LinearHash {
     int hash_value = 1; // 隱測數字可能會很大，優化時把int改成long int
 
     int i = 0;
-    for(int i = 0; i < sid.size(); i += 1) {
-      // hash key
+    while (true) {
+      if (i == sid.size()-1 || sid[i] == '\0') {
+        break;
+      }
       hash_value *= sid[i];
       hash_value %= hash_table_size; 
+
+      i += 1;
     }
     return hash_value;
   }
 
   bool StructIsMpt(HashContent stru){
-    if (stru.sid['\0'] == 0) {
+    if (stru.sid[0] == '\0') {
       return true;
     } // else
     return false;
@@ -111,16 +116,26 @@ class LinearHash {
 
     int insert_pos = temp.hash_value;
     // 如果發生碰撞，找下一個位置直到找到空位為止
-    while(StructIsMpt(hash_table[insert_pos])) {
+    while(StructIsMpt(hash_table[insert_pos]) == false) {
       insert_pos += 1;
       // 如果索引值超出陣列大小，回到陣列開頭
-      if (insert_pos > (sizeof(hash_table) - 1)) {
+      if (insert_pos > (hash_table_size - 1)) {
         insert_pos = 0;
       }
+
+      avg_unsuccess += 1;
     }
 
     // insert temp到hash_table裡
     hash_table[insert_pos] = temp;
+  }
+
+  void CalcAvgSearch() {
+    // avg success search
+    avg_success = avg_unsuccess;
+    avg_success =  avg_success/ hash_table_size;
+    // avg unsuccess search
+    avg_unsuccess = (avg_unsuccess +  hash_table_size) / hash_table_size;
   }
 
   void WriteFile(std::string file_name) {
@@ -230,7 +245,7 @@ class ProgramPackage {
       file.write(reinterpret_cast<char*>(&data), sizeof(data));
     }
     file.close();
-    std::cout << "---" + bin_file + "has been created ---" << std::endl << std::endl;
+    std::cout << "---" + bin_file + " has been created ---" << std::endl << std::endl;
     return;
   }
   
@@ -244,10 +259,14 @@ class ProgramPackage {
   }
 
   void BuildHashByLinear () {
+    // std::array <struct HashContent, linear_hash.CalcHashSize(dataset.size())> hash_table;
     struct HashContent hash_table[linear_hash.CalcHashSize(dataset.size())];
+
     for(int i = 0; i < dataset.size(); i += 1) {
       linear_hash.StoreHash(dataset[i], hash_table);
     }
+
+    linear_hash.CalcAvgSearch();
     linear_hash.Output();
   }
 
@@ -287,6 +306,7 @@ class System {
     std::cout << std::endl;
     program_package.ReadBinFile();
     if (command == 1) {
+      program_package.BuildHashByLinear();
     } else if (command == 2) {
     }
     return;
