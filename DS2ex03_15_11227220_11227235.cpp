@@ -6,36 +6,36 @@
 #include <array>
 #include <cmath>
 #include <string>
+#include <iomanip> // 控制輸出至小數點後第幾位
+
 struct DataType {
-  std::array<char, 10> sid;
-  std::array<char, 10> sname;
+  std::array<char, 10> sid{};
+  std::array<char, 10> sname{};
   unsigned char score[6];
   float average_score;
 };
 
 struct HashContent {
-  int hash_value;
-  std::array<char, 10> sid;
-  std::array<char, 10> sname;
-  float avg_score;  
-  HashContent() { // 初始化內容，確保hash table創建時是空的
-    hash_value = 0;
-    sid.fill('\0');
-    sname.fill('\0');
-    avg_score = 0;
-  }
+  int hash_value = 0;
+  std::array<char, 10> sid{};
+  std::array<char, 10> sname{};
+  float avg_score = 0;
 };
 
 class Hash { // 放linear probing和double共用的函式
  protected: // 只有自身和子類別能存取
   int hash_table_size;
-  // float load;
+  int hash_content_count;
+
+  int prob_count;
   float avg_success;
   float avg_unsuccess;
  public:
   Hash() {
     hash_table_size = 0;
-    // load = 0;
+    hash_content_count = 0;
+
+    prob_count = 0;
     avg_success = 0;
     avg_unsuccess = 0;
   }
@@ -72,12 +72,8 @@ class Hash { // 放linear probing和double共用的函式
       cur += 2;
     }
 
-    // 運算avg search要用的值
+    hash_content_count = dataset_size;
     hash_table_size = cur;
-    // load = hash_table_size / dataset_size;
-
-    //   avg_success   = (1 + 1/(1-load))/2;
-    //   avg_unsuccess = (1 + 1/((1-load)*(1-load)))/2;
 
     return cur;
   }
@@ -92,18 +88,22 @@ class Hash { // 放linear probing和double共用的函式
         break;
       }
       hash_value *= sid[i];
-      hash_value %= hash_table_size; 
+      hash_value %= hash_table_size;
 
       i += 1;
     }
     return hash_value;
   }
-
+  // 找哈希表的空格時呼叫此函式
   bool StructIsMpt(HashContent stru){
     if (stru.sid[0] == '\0') {
       return true;
     } // else
     return false;
+  }
+
+  void WriteFile(std::string file_name) {
+    // 將hash table寫入 linear___.txt
   }
 };
 
@@ -111,8 +111,8 @@ class LinearHash : public Hash {
  private:
   
  public:
-  void StoreHash(struct DataType cur, struct HashContent hash_table[]) {
-    struct HashContent temp;
+  void StoreHash(DataType cur, struct HashContent hash_table[]) {
+    HashContent temp;
     temp.hash_value = CalcHashValue(cur.sid);
     temp.sid = cur.sid;
     temp.sname = cur.sname;
@@ -126,35 +126,70 @@ class LinearHash : public Hash {
       if (insert_pos > (hash_table_size - 1)) {
         insert_pos = 0;
       }
-
-      avg_unsuccess += 1;
+      avg_success += 1;
     }
+    avg_success += 1;
 
     // insert temp到hash_table裡
     hash_table[insert_pos] = temp;
   }
 
-  void CalcAvgSearch() {
-    // avg success search
-    avg_success = avg_unsuccess;
-    avg_success =  avg_success/ hash_table_size;
-    // avg unsuccess search
-    avg_unsuccess = (avg_unsuccess +  hash_table_size) / hash_table_size;
-  }
+  void CalcAvgUnsuccess(struct HashContent hash_table[]) {
+    // 設定基本大小
+    avg_unsuccess = 0;
 
-  void WriteFile(std::string file_name) {
-    // 將hash table寫入 linear___.txt
+    // 找出第一個空格(起始位置)
+    int index = 0;
+    for (index = 0; index < hash_table_size; index += 1) {
+      if (StructIsMpt(hash_table[index])) {
+        break;
+      }
+    }
+    int start_point = index;
+    index += 1;
+    // 找區塊
+    int block_size = 0;
+    while(true) {
+      // 超出陣列大小，index重設到0(開頭)
+      if (index > (hash_table_size - 1)) {
+        index = 0;
+      }
+      if (StructIsMpt(hash_table[index])) { // 找到空白，開始計算區塊大小
+        if (block_size != 0) {
+          avg_unsuccess += (block_size/2) * (block_size + 1); // 頭尾相加，例如把4+3+2+1變成(4+1) + (3+2)
+          if (block_size %2 != 0) {
+            avg_unsuccess += (block_size + 1) / 2; // 如果是奇數的話，要額外加沒加到的中間數
+          }
+          block_size = 0;
+        }
+      } else {
+        block_size += 1;
+      }
+
+      // 如果index再次回到start_point(可能不為零)，代表走完一圈，遍歷完了。
+      if (index == start_point) {
+        break;
+      }
+      index += 1;
+    }
+    
+    avg_unsuccess = avg_unsuccess / hash_table_size;
   }
-  // output
+  
+  void CalcAvgSuccess() {
+    avg_success = (avg_success) / hash_content_count;
+  }
+  
   void Output() {
-    std::cout << "Hash table has been successfully created by Linear probing" << std::endl
-              << "unsuccessful search: " << avg_success << "comparisons on average" << std::endl
-              << "successful search: " << avg_unsuccess  << "comparisons on average" << std::endl;
+    std::cout << std :: fixed << std :: setprecision(4)
+              << "Hash table has been successfully created by Linear probing" << std::endl
+              << "unsuccessful search: " << avg_unsuccess << " comparisons on average" << std::endl
+              << "successful search: " << avg_success << " comparisons on average" << std::endl;
   } 
 };
 
-class DoubleHash {
-  // 找最小質數(上網找演算法)
+class DoubleHash : public Hash {
+  
 };
 
 class ProgramPackage {
@@ -252,10 +287,8 @@ class ProgramPackage {
     std::cout << "---" + bin_file + " has been created ---" << std::endl << std::endl;
     return;
   }
-  
   std::array<char, 10> TransToChar(std::string str) {
-    std::array<char, 10> arr;
-    str.resize(10, '\0');
+    std::array<char, 10> arr{};
     for(int i = 0; i < str.length(); i++) {
       arr[i] = str[i];
     }
@@ -263,14 +296,14 @@ class ProgramPackage {
   }
 
   void BuildHashByLinear () {
-    // std::array <struct HashContent, linear_hash.CalcHashSize(dataset.size())> hash_table;
     struct HashContent hash_table[linear_hash.CalcHashSize(dataset.size())];
 
     for(int i = 0; i < dataset.size(); i += 1) {
       linear_hash.StoreHash(dataset[i], hash_table);
     }
 
-    linear_hash.CalcAvgSearch();
+    linear_hash.CalcAvgUnsuccess(hash_table);
+    linear_hash.CalcAvgSuccess();
     linear_hash.Output();
   }
 
@@ -298,9 +331,11 @@ class System {
     PrintUI();
     std::cout << "Input a choice(0, 1, 2): ";
     std::cin >> command;
-    if (command == 1 || command == 2) {
+    if (command == 0) {
+      return command;
+    } else if (command == 1 || command == 2) {
       CallProgram(command);
-    } else if (command != 0) {
+    } else {
       std::cout << std::endl << "Command does not exist!" << std::endl << std::endl << std::endl;
     }
     return command;
