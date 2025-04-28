@@ -26,35 +26,34 @@ struct HashContent {
   }
 };
 
-class LinearHash {
- private:
+class Hash { // 放linear probing和double共用的函式
+ protected: // 只有自身和子類別能存取
   int hash_table_size;
-  float load;
+  // float load;
   float avg_success;
   float avg_unsuccess;
  public:
-  LinearHash(){
+  Hash() {
     hash_table_size = 0;
-    load = 0;
+    // load = 0;
     avg_success = 0;
     avg_unsuccess = 0;
   }
-
   bool IsPrime(int num) {
     // 排除掉較好判斷的情況
-    if (num <= 1) { 
-      return false; 
+    if (num <= 1) {
+      return false;
     } else if (num == 2) {
-      return true;  
+      return true;
     } else if (num % 2 == 0) {
-      return false; 
-    } 
+      return false;
+    }
 
     // 檢查num能不能被整除
     for (int i = 3; i <= std::sqrt(num); i += 2) {
-        if (num % i == 0) {
-            return false;
-        }
+      if (num % i == 0) {
+        return false;
+      }
     }
 
     return true;
@@ -106,7 +105,12 @@ class LinearHash {
     } // else
     return false;
   }
+};
 
+class LinearHash : public Hash {
+ private:
+  
+ public:
   void StoreHash(struct DataType cur, struct HashContent hash_table[]) {
     struct HashContent temp;
     temp.hash_value = CalcHashValue(cur.sid);
