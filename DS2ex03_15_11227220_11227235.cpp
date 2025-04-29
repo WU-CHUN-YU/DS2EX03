@@ -24,7 +24,7 @@ struct HashContent {
 
 class Hash { // 放linear probing和double共用的函式
  protected: // 只有自身和子類別能存取
-  int hash_table_size;
+  std::vector<HashContent> hash_table;
   int hash_content_count;
 
   int prob_count;
@@ -32,7 +32,6 @@ class Hash { // 放linear probing和double共用的函式
   float avg_unsuccess;
  public:
   Hash() {
-    hash_table_size = 0;
     hash_content_count = 0;
 
     prob_count = 0;
@@ -59,8 +58,10 @@ class Hash { // 放linear probing和double共用的函式
     return true;
   }
 
-  int CalcHashSize(int dataset_size) {
-    int cur = dataset_size * 1.1 + 1; //start value
+  // 輸出比輸入值大的最小質數
+  int FindBiggerPrime(int cur) {
+    cur += 1; //確保輸出比輸入值大
+
     if(cur % 2 == 0) { // 確保當前值是奇數
       cur += 1;        // 確保當前值是奇數
     }
@@ -72,14 +73,19 @@ class Hash { // 放linear probing和double共用的函式
       cur += 2;
     }
 
-    hash_content_count = dataset_size;
-    hash_table_size = cur;
-
     return cur;
   }
 
-  // processing
-  int CalcHashValue(std::array<char, 10> sid) {
+  void CalcHashSize(int dataset_size) {
+    int size = dataset_size * 1.1 ; //start value
+    
+    hash_table.resize(FindBiggerPrime(size));
+    hash_content_count = dataset_size;
+  }
+
+  // 引數divisor會決定 運算hash value時的除數。
+  // 因為可以控制除數，算hash value和算step的時候都可以呼叫此函式
+  int CalcHashValue(std::array<char, 10> sid, int divisor) {
     int hash_value = 1; // 隱測數字可能會很大，優化時把int改成long int
 
     int i = 0;
@@ -88,7 +94,7 @@ class Hash { // 放linear probing和double共用的函式
         break;
       }
       hash_value *= sid[i];
-      hash_value %= hash_table_size;
+      hash_value %= divisor;
 
       i += 1;
     }
@@ -102,17 +108,25 @@ class Hash { // 放linear probing和double共用的函式
     return false;
   }
 
-  void WriteFile(std::string file_name, std::vector<HashContent>& hash_table) {
-    // 將hash table寫入 linear___.txt
+  void WriteFile(std::string file_name) {
+    // 將hash table寫入 linear__.txt
     std::string output_file_name = "linear" + file_name + ".txt";
     std::ofstream file;
     file.open(output_file_name);
-    int index = 1;
-    for (HashContent data : hash_table) {
-      file << "[" << std::setw(2) << index << "]";
-      // file << setW(11) << 
-      index++;
+    file << " --- Hash table created by Linear probing    ---" << "\n";
+    for (int i = 0; i < hash_table.size(); i++) {
+      if (hash_table[i].hash_value == 0) {
+        file << "[" << std::setw(3) << i << "] " << "\n";
+      } else {
+        file << "[" << std::setw(3) << i << "]";
+        file<< std::setw(11) << hash_table[i].hash_value << "," 
+            << std::setw(11) << std::string(hash_table[i].sid.data()) << "," 
+            << std::setw(11) << std::string(hash_table[i].sname.data()) << "," 
+            << std::setw(11) << hash_table[i].avg_score << "\n";
+      }
     }
+    file << " ----------------------------------------------------- " << "\n";
+    file.close();
   }
 };
 
@@ -120,9 +134,9 @@ class LinearHash : public Hash {
  private:
   
  public:
-  void StoreHash(DataType cur, std::vector<HashContent>& hash_table) {
+  void StoreHash(DataType cur) {
     HashContent temp;
-    temp.hash_value = CalcHashValue(cur.sid);
+    temp.hash_value = CalcHashValue(cur.sid, hash_table.size());
     temp.sid = cur.sid;
     temp.sname = cur.sname;
     temp.avg_score = cur.average_score;
@@ -132,7 +146,7 @@ class LinearHash : public Hash {
     while(StructIsMpt(hash_table[insert_pos]) == false) {
       insert_pos += 1;
       // 如果索引值超出陣列大小，回到陣列開頭
-      if (insert_pos > (hash_table_size - 1)) {
+      if (insert_pos > (hash_table.size() - 1)) {
         insert_pos = 0;
       }
       avg_success += 1;
@@ -143,14 +157,13 @@ class LinearHash : public Hash {
     hash_table[insert_pos] = temp;
   }
 
-  void CalcAvgUnsuccess(std::vector<HashContent>& hash_table) {
-
+  void CalcAvgUnsuccess() {
     // 設定基本大小
     avg_unsuccess = 0;
 
     // 找出第一個空格(起始位置)
     int index = 0;
-    for (index = 0; index < hash_table_size; index += 1) {
+    for (index = 0; index < hash_table.size(); index += 1) {
       if (StructIsMpt(hash_table[index])) {
         break;
       }
@@ -161,7 +174,7 @@ class LinearHash : public Hash {
     int block_size = 0;
     while(true) {
       // 超出陣列大小，index重設到0(開頭)
-      if (index > (hash_table_size - 1)) {
+      if (index > (hash_table.size() - 1)) {
         index = 0;
       }
       if (StructIsMpt(hash_table[index])) { // 找到空白，開始計算區塊大小
@@ -183,7 +196,7 @@ class LinearHash : public Hash {
       index += 1;
     }
     
-    avg_unsuccess = avg_unsuccess / hash_table_size;
+    avg_unsuccess = avg_unsuccess / hash_table.size();
   }
   
   void CalcAvgSuccess() {
@@ -195,17 +208,61 @@ class LinearHash : public Hash {
               << "Hash table has been successfully created by Linear probing" << std::endl
               << "unsuccessful search: " << avg_unsuccess << " comparisons on average" << std::endl
               << "successful search: " << avg_success << " comparisons on average" << std::endl;
-  } 
+  }
 };
 
 class DoubleHash : public Hash {
+  private:
   
+ public:
+
+  int CalcStep(std::array<char, 10> sid) {
+    int step_ceil = FindBiggerPrime(hash_content_count/5);
+    return step_ceil - CalcHashValue(sid, step_ceil);
+  }
+
+  void StoreHash(DataType cur) {
+    HashContent temp;
+    temp.hash_value = CalcHashValue(cur.sid, hash_table.size());
+    temp.sid = cur.sid;
+    temp.sname = cur.sname;
+    temp.avg_score = cur.average_score;
+
+    int insert_pos = temp.hash_value;
+
+    // 如果發生碰撞，找下一個位置直到找到空位為止
+    int step = CalcStep(temp.sid);
+    while(StructIsMpt(hash_table[insert_pos]) == false) {
+      // 如果索引值超出陣列大小，回到陣列開頭
+      if (insert_pos + step> (hash_table.size() - 1)) {
+        insert_pos = step - ((hash_table.size() - 1) - insert_pos) - 1;
+      } else {
+        insert_pos += step;
+      }
+      avg_success += 1;
+    }
+    avg_success += 1;
+
+    // insert temp到hash_table裡
+    hash_table[insert_pos] = temp;
+  }
+  
+  void CalcAvgSuccess() {
+    avg_success = avg_success / hash_content_count;
+  }
+  
+  void Output() {
+    std::cout << std :: fixed << std :: setprecision(4)
+              << "Hash table has been successfully created by Double hashing" << std::endl
+              << "successful search: " << avg_success << " comparisons on average" << std::endl;
+  }
 };
 
 class ProgramPackage {
  private:
   std::vector<DataType> dataset;
   LinearHash linear_hash;
+  DoubleHash double_hash;
   std::string file_name;
  public:
  std::string SplitString(std::string &line) {  //  切割檔案字串，取得欄目數據
@@ -307,20 +364,27 @@ class ProgramPackage {
   }
 
   void BuildHashByLinear () {
-    std::vector<HashContent> hash_table;
-    hash_table.resize(linear_hash.CalcHashSize(dataset.size()));
+    
+    linear_hash.CalcHashSize(dataset.size());
 
     for(int i = 0; i < dataset.size(); i += 1) {
-      linear_hash.StoreHash(dataset[i], hash_table);
+      linear_hash.StoreHash(dataset[i]);
     }
-    linear_hash.WriteFile(file_name, hash_table);
-    linear_hash.CalcAvgUnsuccess(hash_table);
+    linear_hash.WriteFile(file_name);
+    linear_hash.CalcAvgUnsuccess();
     linear_hash.CalcAvgSuccess();
     linear_hash.Output();
   }
 
   void BuildHashByDouble () {
-    
+    double_hash.CalcHashSize(dataset.size());
+
+    for(int i = 0; i < dataset.size(); i += 1) {
+      double_hash.StoreHash(dataset[i]);
+    }
+    double_hash.WriteFile(file_name);
+    double_hash.CalcAvgSuccess();
+    double_hash.Output();
   }
 };
 
@@ -360,6 +424,7 @@ class System {
     if (command == 1) {
       program_package.BuildHashByLinear();
     } else if (command == 2) {
+      program_package.BuildHashByDouble();
     }
     return;
   }
