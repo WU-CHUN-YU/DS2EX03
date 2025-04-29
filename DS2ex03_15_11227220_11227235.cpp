@@ -38,6 +38,10 @@ class Hash { // 放linear probing和double共用的函式
     avg_success = 0;
     avg_unsuccess = 0;
   }
+  void ClearRecord() {
+    hash_table.clear();
+    return;
+  }
   bool IsPrime(int num) {
     // 排除掉較好判斷的情況
     if (num <= 1) {
@@ -108,12 +112,18 @@ class Hash { // 放linear probing和double共用的函式
     return false;
   }
 
-  void WriteFile(std::string file_name) {
+  void WriteFile(std::string file_name, std::string type) {
     // 將hash table寫入 linear__.txt
-    std::string output_file_name = "linear" + file_name + ".txt";
+    std::string output_file_name;
+    if (type == "Linear") {
+      output_file_name = "linear" + file_name + ".txt";
+    } else if (type == "Double") {
+      output_file_name = "double" + file_name + ".txt";
+    }
+
     std::ofstream file;
     file.open(output_file_name);
-    file << " --- Hash table created by Linear probing    ---" << "\n";
+    file << " --- Hash table created by " << type << " probing    ---" << "\n";
     for (int i = 0; i < hash_table.size(); i++) {
       if (hash_table[i].hash_value == 0) {
         file << "[" << std::setw(3) << i << "] " << "\n";
@@ -204,10 +214,12 @@ class LinearHash : public Hash {
   }
   
   void Output() {
+    std::cout << "\n";
     std::cout << std :: fixed << std :: setprecision(4)
-              << "Hash table has been successfully created by Linear probing" << std::endl
+              << "Hash table has been successfully created by Linear probing   " << std::endl
               << "unsuccessful search: " << avg_unsuccess << " comparisons on average" << std::endl
               << "successful search: " << avg_success << " comparisons on average" << std::endl;
+    std::cout << "\n";
   }
 };
 
@@ -253,7 +265,7 @@ class DoubleHash : public Hash {
   
   void Output() {
     std::cout << std :: fixed << std :: setprecision(4)
-              << "Hash table has been successfully created by Double hashing" << std::endl
+              << "Hash table has been successfully created by Double hashing   " << std::endl
               << "successful search: " << avg_success << " comparisons on average" << std::endl;
   }
 };
@@ -264,6 +276,7 @@ class ProgramPackage {
   LinearHash linear_hash;
   DoubleHash double_hash;
   std::string file_name;
+  bool doMissionOne = false;
  public:
  std::string SplitString(std::string &line) {  //  切割檔案字串，取得欄目數據
   std::string splited;
@@ -317,6 +330,7 @@ class ProgramPackage {
       }
     }
     //真正讀檔部分
+    dataset.clear();
     DataType data;
     while (file.read(reinterpret_cast<char*>(&data), sizeof(data))) {
       dataset.push_back(data);
@@ -352,7 +366,7 @@ class ProgramPackage {
       file.write(reinterpret_cast<char*>(&data), sizeof(data));
     }
     file.close();
-    std::cout << "---" + bin_file + " has been created ---" << std::endl << std::endl;
+    std::cout << "---" + bin_file + " has been created ---" << std::endl;
     return;
   }
   std::array<char, 10> TransToChar(std::string str) {
@@ -364,27 +378,35 @@ class ProgramPackage {
   }
 
   void BuildHashByLinear () {
-    
+    linear_hash.ClearRecord();
+    doMissionOne = true;
     linear_hash.CalcHashSize(dataset.size());
-
     for(int i = 0; i < dataset.size(); i += 1) {
       linear_hash.StoreHash(dataset[i]);
     }
-    linear_hash.WriteFile(file_name);
+    linear_hash.WriteFile(file_name, "Linear");
     linear_hash.CalcAvgUnsuccess();
     linear_hash.CalcAvgSuccess();
     linear_hash.Output();
   }
 
   void BuildHashByDouble () {
+    double_hash.ClearRecord();
+    if (!doMissionOne) {
+      std::cout << "### Command 1 first. ###" << "\n\n\n";
+      return;
+    }
+    doMissionOne = false;
     double_hash.CalcHashSize(dataset.size());
 
     for(int i = 0; i < dataset.size(); i += 1) {
       double_hash.StoreHash(dataset[i]);
     }
-    double_hash.WriteFile(file_name);
+    std::cout << "\n";
+    double_hash.WriteFile(file_name, "Double");
     double_hash.CalcAvgSuccess();
     double_hash.Output();
+    std::cout << "\n";
   }
 };
 
@@ -403,25 +425,29 @@ class System {
     return;
   }
   int ReadCommand() {  //讀取執行指令
-    int command;
+    std::string command;
     PrintUI();
     std::cout << "Input a choice(0, 1, 2): ";
     std::cin >> command;
-    if (command == 0 || command == 1 || command == 2) {
-      CallProgram(command);
+    if (command == "0") {
+      return 0;
+    } else if (command == "1" || command == "2") {
+      CallProgram(std::stoi(command));
     } else {
       std::cout << std::endl << "Command does not exist!" << std::endl << std::endl << std::endl;
     }
-    return command;
+    return 4;
   }
 
   void CallProgram(int command) {  //執行指定程式
     if (command == 0) {
       return;
     }
-    std::cout << std::endl;
-    program_package.ReadBinFile();
     if (command == 1) {
+      std::cout << std::endl;
+      if (!program_package.ReadBinFile()) {
+        return;
+      }
       program_package.BuildHashByLinear();
     } else if (command == 2) {
       program_package.BuildHashByDouble();
