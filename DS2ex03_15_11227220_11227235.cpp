@@ -282,7 +282,7 @@ class ProgramPackage {
         data.sname = TransToChar(SplitString(line));
       } else if (column == 8) {
         std::string s = SplitString(line);
-        if (s == "") {
+        if (s == "\r") {
           s = "0";
         }
         data.average_score = std::stof(s);
