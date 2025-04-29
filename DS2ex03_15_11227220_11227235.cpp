@@ -102,8 +102,17 @@ class Hash { // 放linear probing和double共用的函式
     return false;
   }
 
-  void WriteFile(std::string file_name) {
+  void WriteFile(std::string file_name, std::vector<HashContent>& hash_table) {
     // 將hash table寫入 linear___.txt
+    std::string output_file_name = "linear" + file_name + ".txt";
+    std::ofstream file;
+    file.open(output_file_name);
+    int index = 1;
+    for (HashContent data : hash_table) {
+      file << "[" << std::setw(2) << index << "]";
+      // file << setW(11) << 
+      index++;
+    }
   }
 };
 
@@ -111,7 +120,7 @@ class LinearHash : public Hash {
  private:
   
  public:
-  void StoreHash(DataType cur, struct HashContent hash_table[]) {
+  void StoreHash(DataType cur, std::vector<HashContent>& hash_table) {
     HashContent temp;
     temp.hash_value = CalcHashValue(cur.sid);
     temp.sid = cur.sid;
@@ -134,7 +143,8 @@ class LinearHash : public Hash {
     hash_table[insert_pos] = temp;
   }
 
-  void CalcAvgUnsuccess(struct HashContent hash_table[]) {
+  void CalcAvgUnsuccess(std::vector<HashContent>& hash_table) {
+
     // 設定基本大小
     avg_unsuccess = 0;
 
@@ -177,7 +187,7 @@ class LinearHash : public Hash {
   }
   
   void CalcAvgSuccess() {
-    avg_success = (avg_success) / hash_content_count;
+    avg_success = avg_success / hash_content_count;
   }
   
   void Output() {
@@ -196,6 +206,7 @@ class ProgramPackage {
  private:
   std::vector<DataType> dataset;
   LinearHash linear_hash;
+  std::string file_name;
  public:
  std::string SplitString(std::string &line) {  //  切割檔案字串，取得欄目數據
   std::string splited;
@@ -231,7 +242,7 @@ class ProgramPackage {
   }
   bool ReadBinFile() {
     std::ifstream file;
-    std::string file_name, bin_file, file_line;
+    std::string bin_file, file_line;
     std::cout << "Input a file number ([0] Quit): ";
     std::cin >> file_name;
     if (file_name == "0") {
@@ -242,7 +253,7 @@ class ProgramPackage {
     file.open(bin_file, std::ios::in | std::ios::binary);
     if (!file.is_open()) { //確認檔案是否存在
       std::cout << std::endl << "### " << bin_file << " does not exist!" << " ###" << std::endl << std::endl;
-      if (!ReadTXTFile(file_name)) {
+      if (!ReadTXTFile()) {
         return false;
       } else {
         file.open(bin_file, std::ios::in | std::ios::binary);
@@ -256,7 +267,7 @@ class ProgramPackage {
     file.close();
     return true;
   }
-  bool ReadTXTFile(std::string file_name) {  //讀取TXT檔案
+  bool ReadTXTFile() {  //讀取TXT檔案
     std::ifstream file;
     std::string txt_file, file_line;
     std::vector<DataType> temp_dataset;
@@ -273,10 +284,10 @@ class ProgramPackage {
       temp_dataset.push_back(data);
     }
     file.close();
-    WriteBinFile(temp_dataset, file_name);
+    WriteBinFile(temp_dataset);
     return true;
   }
-  void WriteBinFile(std::vector<DataType> temp, std::string file_name) {
+  void WriteBinFile(std::vector<DataType> temp) {
     std::ofstream file;
     std::string bin_file = "input" + file_name + ".bin";
     file.open(bin_file, std::ios::out | std::ios::binary);
@@ -296,12 +307,13 @@ class ProgramPackage {
   }
 
   void BuildHashByLinear () {
-    struct HashContent hash_table[linear_hash.CalcHashSize(dataset.size())];
+    std::vector<HashContent> hash_table;
+    hash_table.resize(linear_hash.CalcHashSize(dataset.size()));
 
     for(int i = 0; i < dataset.size(); i += 1) {
       linear_hash.StoreHash(dataset[i], hash_table);
     }
-
+    linear_hash.WriteFile(file_name, hash_table);
     linear_hash.CalcAvgUnsuccess(hash_table);
     linear_hash.CalcAvgSuccess();
     linear_hash.Output();
@@ -331,9 +343,7 @@ class System {
     PrintUI();
     std::cout << "Input a choice(0, 1, 2): ";
     std::cin >> command;
-    if (command == 0) {
-      return command;
-    } else if (command == 1 || command == 2) {
+    if (command == 0 || command == 1 || command == 2) {
       CallProgram(command);
     } else {
       std::cout << std::endl << "Command does not exist!" << std::endl << std::endl << std::endl;
@@ -342,6 +352,9 @@ class System {
   }
 
   void CallProgram(int command) {  //執行指定程式
+    if (command == 0) {
+      return;
+    }
     std::cout << std::endl;
     program_package.ReadBinFile();
     if (command == 1) {
