@@ -39,6 +39,10 @@ class Hash { // 放linear probing和double共用的函式
     avg_unsuccess = 0;
   }
   void ClearRecord() {
+    hash_content_count = 0;
+    prob_count = 0;
+    avg_success = 0;
+    avg_unsuccess = 0;
     hash_table.clear();
     return;
   }
