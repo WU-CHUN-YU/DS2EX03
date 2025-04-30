@@ -123,7 +123,11 @@ class Hash { // 放linear probing和double共用的函式
 
     std::ofstream file;
     file.open(output_file_name);
-    file << " --- Hash table created by " << type << " probing    ---" << "\n";
+    if (type == "Linear") {
+      file << " --- Hash table created by Linear probing    ---" << "\n";
+    } else if (type == "Double") {
+      file << " --- Hash table created by Double hashing    ---" << "\n";
+    }
     for (int i = 0; i < hash_table.size(); i++) {
       if (hash_table[i].hash_value == 0) {
         file << "[" << std::setw(3) << i << "] " << "\n";
